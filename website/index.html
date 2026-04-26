@@ -497,12 +497,14 @@
     buildRoleFilters(data)
   }
 
+  const REFRESH_RECENT_SECS = 60
+
   // Update last-refresh timestamp in header
   const updateRefreshDisplay = () => {
     if (!lastFetchTime) return
     const el = document.getElementById('last-refresh')
     const age = Math.floor((Date.now() - lastFetchTime) / 1000)
-    if (age < 60) {
+    if (age < REFRESH_RECENT_SECS) {
       el.textContent = 'Updated just now'
     } else {
       el.textContent = `Updated ${duration(age)} ago`
@@ -694,13 +696,11 @@
       const lastSeen = Math.max(...Object.values(seenBy))
       const opacity = 1.0 - (Date.now() / 1000 - lastSeen) / 43200
       const tooltipContent = `${html(longName)} (${html(shortName)}) ${since(lastSeen)}`
-      // unique element id for copy button
-      const copyBtnId = `copy-btn-${nodeNum}`
       const popupContent = `
         <div class="title">${html(longName)} (${html(shortName)})</div>
         <div>
           ${nodeLink(nodeNum, id)}
-          <button class="copy-id-btn" id="${copyBtnId}" title="Copy node ID" onclick="copyToClipboard('${html(id)}',document.getElementById('${copyBtnId}'))"><i class="fa fa-clipboard"></i></button>
+          <button class="copy-id-btn" data-id="${html(id)}" title="Copy node ID" onclick="copyToClipboard(this.dataset.id,this)"><i class="fa fa-clipboard"></i></button>
           | ${html(role)} | ${html(hwModel)}
         </div>
         <table><tbody>

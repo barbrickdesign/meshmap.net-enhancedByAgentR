@@ -53,16 +53,18 @@ func (c *MQTTClient) Connect() error {
 	opts.SetOrderMatters(false)
 	opts.SetDefaultPublishHandler(c.handleMessage)
 	opts.SetAutoReconnect(true)
-	opts.SetOnConnectHandler(func(_ mqtt.Client) {
+	opts.SetOnConnectHandler(func(cl mqtt.Client) {
 		log.Print("[mqtt] connected")
 		topics := make(map[string]byte)
 		for _, topic := range c.Topics {
 			topics[topic] = 0
 		}
-		token := c.SubscribeMultiple(topics, nil)
+		token := cl.SubscribeMultiple(topics, nil)
 		<-token.Done()
 		if err := token.Error(); err != nil {
-			log.Printf("[mqtt] subscribe error: %v", err)
+			log.Printf("[mqtt] subscribe error: %v; disconnecting to force reconnect", err)
+			// Disconnect so the auto-reconnect loop retries from scratch.
+			cl.Disconnect(0)
 			return
 		}
 		log.Print("[mqtt] subscribed")
