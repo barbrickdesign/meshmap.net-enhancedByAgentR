@@ -59,9 +59,13 @@
   #header a img {
     display: block;
   }
-  #header div:nth-child(2) {
+  #header-spacer {
     flex-grow: 1;
-    text-align: right;
+  }
+  #last-refresh {
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
   }
   #map {
     position: absolute;
@@ -109,6 +113,159 @@
       display: none;
     }
   }
+  /* Copy-ID button */
+  .copy-id-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 4px;
+    color: inherit;
+    font-size: 11px;
+    opacity: 0.6;
+    vertical-align: middle;
+  }
+  .copy-id-btn:hover {
+    opacity: 1;
+  }
+  /* Stats / Filter panel */
+  #stats-panel {
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    width: 280px;
+    max-height: calc(100vh - 70px);
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 30%);
+    z-index: 999;
+    font-family: "Inter", sans-serif;
+    font-size: 13px;
+    color: #333;
+    display: none;
+  }
+  #stats-panel.open {
+    display: block;
+  }
+  #stats-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px 6px;
+    border-bottom: 1px solid #eee;
+    font-weight: 600;
+    font-size: 14px;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 1;
+  }
+  #stats-panel-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+    color: #666;
+    padding: 0;
+  }
+  #stats-panel-close:hover {
+    color: #000;
+  }
+  .stats-section {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .stats-section:last-child {
+    border-bottom: none;
+  }
+  .stats-section h4 {
+    margin: 0 0 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #888;
+    font-weight: 600;
+  }
+  .stats-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .stats-row:last-child {
+    margin-bottom: 0;
+  }
+  .stats-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stats-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .stats-count {
+    font-weight: 600;
+    color: #555;
+  }
+  .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+    cursor: pointer;
+  }
+  .filter-row:last-child {
+    margin-bottom: 0;
+  }
+  .filter-row input[type="checkbox"] {
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+  .filter-row label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+  }
+  #filter-all-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+  }
+  /* Legend strip */
+  #legend {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    font-family: "Inter", sans-serif;
+    color: #555;
+    align-items: center;
+  }
+  #legend span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
 </style>
 <script>
   const toggleDark = () => {
@@ -129,6 +286,11 @@
   <div>
     <a href="https://meshmap.net/" title="A nearly live map of Meshtastic nodes seen by the official Meshtastic MQTT server">MeshMap</a>
   </div>
+  <div id="header-spacer"></div>
+  <div id="last-refresh" title="Time since last data refresh"></div>
+  <div>
+    <a href="#" onclick="toggleStatsPanel();return false;" title="Node statistics &amp; filters"><i class="fa fa-bar-chart fa-lg"></i></a>
+  </div>
   <div>
     <a href="#" onclick="toggleDark();return false;" title="Toggle dark mode">
       <i class="fa fa-moon-o fa-lg dark-hidden"></i>
@@ -147,6 +309,37 @@
     </a>
   </div>
 </div>
+<!-- Stats & Filter Panel -->
+<div id="stats-panel">
+  <div id="stats-panel-header">
+    <span>Stats &amp; Filters</span>
+    <button id="stats-panel-close" onclick="toggleStatsPanel()" title="Close">&#x2715;</button>
+  </div>
+  <div class="stats-section">
+    <h4>Summary</h4>
+    <div id="stats-summary"></div>
+  </div>
+  <div class="stats-section">
+    <h4>Filter by Role</h4>
+    <div id="filter-all-row">
+      <input type="checkbox" id="filter-all" checked onchange="toggleAllFilters(this.checked)">
+      <label for="filter-all" style="font-weight:600;">Show all roles</label>
+    </div>
+    <div id="filter-roles"></div>
+  </div>
+  <div class="stats-section">
+    <h4>By Role</h4>
+    <div id="stats-roles"></div>
+  </div>
+  <div class="stats-section">
+    <h4>Top Hardware Models</h4>
+    <div id="stats-hardware"></div>
+  </div>
+  <div class="stats-section">
+    <h4>Top Regions</h4>
+    <div id="stats-regions"></div>
+  </div>
+</div>
 <div id="map"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-easybutton@2.4.0/src/easy-button.js"></script>
@@ -156,7 +349,168 @@
   let lastActiveNode
   let markersByNode = {}
   let nodesBySearchString = {}
+  let lastData = null
+  let lastFetchTime = null
   const updateInterval = 65000
+
+  // Role color mapping
+  const roleColors = {
+    ROUTER:        '#1565c0',
+    ROUTER_CLIENT: '#1976d2',
+    REPEATER:      '#e65100',
+    TRACKER:       '#6a1b9a',
+    SENSOR:        '#00695c',
+    TAK:           '#827717',
+    LOST_AND_FOUND:'#b71c1c',
+    CLIENT_MUTE:   '#546e7a',
+    CLIENT_HIDDEN: '#546e7a',
+    CLIENT:        '#2e7d32',
+  }
+  const defaultRoleColor = '#2e7d32'
+  const roleColor = role => roleColors[role] ?? defaultRoleColor
+
+  // All known roles for filter UI (ordered by significance)
+  const knownRoles = [
+    'ROUTER', 'ROUTER_CLIENT', 'REPEATER', 'CLIENT', 'CLIENT_MUTE',
+    'CLIENT_HIDDEN', 'TRACKER', 'SENSOR', 'TAK', 'LOST_AND_FOUND',
+  ]
+  // Roles currently enabled (null means all enabled)
+  let enabledRoles = null
+
+  // Create a colored SVG circle marker icon
+  const createIcon = (role, opacity) => {
+    const color = roleColor(role)
+    return L.divIcon({
+      className: '',
+      html: `<svg width="14" height="14" viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="7" cy="7" r="5.5" fill="${color}" fill-opacity="${Math.max(0.25, opacity)}" stroke="${color}" stroke-width="2" stroke-opacity="${Math.max(0.5, opacity)}"/>
+      </svg>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+      popupAnchor: [0, -9],
+    })
+  }
+
+  // Toggle stats panel
+  const toggleStatsPanel = () => {
+    document.getElementById('stats-panel').classList.toggle('open')
+  }
+
+  // Toggle all role filters at once
+  const toggleAllFilters = checked => {
+    document.querySelectorAll('#filter-roles input[type=checkbox]').forEach(cb => {
+      cb.checked = checked
+    })
+    enabledRoles = checked ? null : new Set()
+    renderNodes(lastData)
+  }
+
+  // Handle individual role checkbox change
+  const onRoleFilterChange = () => {
+    const checked = new Set()
+    document.querySelectorAll('#filter-roles input[type=checkbox]').forEach(cb => {
+      if (cb.checked) checked.add(cb.dataset.role)
+    })
+    const allRoles = document.querySelectorAll('#filter-roles input[type=checkbox]').length
+    enabledRoles = checked.size === allRoles ? null : checked
+    document.getElementById('filter-all').checked = enabledRoles === null
+    renderNodes(lastData)
+  }
+
+  // Build filter checkboxes for roles present in data
+  const buildRoleFilters = data => {
+    const presentRoles = new Set(Object.values(data).map(n => n.role).filter(Boolean))
+    const ordered = [...knownRoles.filter(r => presentRoles.has(r)),
+                     ...[...presentRoles].filter(r => !knownRoles.includes(r)).sort()]
+    const container = document.getElementById('filter-roles')
+    container.innerHTML = ''
+    ordered.forEach(role => {
+      const row = document.createElement('div')
+      row.className = 'filter-row'
+      const isEnabled = enabledRoles === null || enabledRoles.has(role)
+      row.innerHTML = `
+        <input type="checkbox" id="filter-role-${role}" data-role="${role}" ${isEnabled ? 'checked' : ''} onchange="onRoleFilterChange()">
+        <label for="filter-role-${role}">
+          <span class="stats-dot" style="background:${roleColor(role)}"></span>
+          ${html(role)}
+        </label>
+      `
+      container.appendChild(row)
+    })
+  }
+
+  // Update stats panel content
+  const updateStats = data => {
+    if (!data) return
+    const nodes = Object.values(data)
+    const total = nodes.length
+    const now = Date.now() / 1000
+    const recent = nodes.filter(n => Math.max(...Object.values(n.seenBy)) > now - 3600).length
+
+    // Summary
+    document.getElementById('stats-summary').innerHTML = `
+      <div class="stats-row"><span>Total nodes</span><span class="stats-count">${total.toLocaleString()}</span></div>
+      <div class="stats-row"><span>Seen in last hour</span><span class="stats-count">${recent.toLocaleString()}</span></div>
+    `
+    // Role counts
+    const roleCounts = {}
+    nodes.forEach(n => { if (n.role) roleCounts[n.role] = (roleCounts[n.role] ?? 0) + 1 })
+    const rolesEl = document.getElementById('stats-roles')
+    rolesEl.innerHTML = Object.entries(roleCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([role, count]) => `
+        <div class="stats-row">
+          <span class="stats-label"><span class="stats-dot" style="background:${roleColor(role)}"></span>${html(role)}</span>
+          <span class="stats-count">${count.toLocaleString()}</span>
+        </div>`
+      ).join('')
+
+    // Hardware counts (top 10)
+    const hwCounts = {}
+    nodes.forEach(n => { if (n.hwModel) hwCounts[n.hwModel] = (hwCounts[n.hwModel] ?? 0) + 1 })
+    const hwEl = document.getElementById('stats-hardware')
+    hwEl.innerHTML = Object.entries(hwCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([hw, count]) => `
+        <div class="stats-row">
+          <span>${html(hw)}</span>
+          <span class="stats-count">${count.toLocaleString()}</span>
+        </div>`
+      ).join('')
+
+    // Region counts (top 10)
+    const regionCounts = {}
+    nodes.forEach(n => { if (n.region) regionCounts[n.region] = (regionCounts[n.region] ?? 0) + 1 })
+    const regionEl = document.getElementById('stats-regions')
+    regionEl.innerHTML = Object.entries(regionCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([region, count]) => `
+        <div class="stats-row">
+          <span>${html(region)}</span>
+          <span class="stats-count">${count.toLocaleString()}</span>
+        </div>`
+      ).join('')
+
+    // Build role filters
+    buildRoleFilters(data)
+  }
+
+  const REFRESH_RECENT_SECS = 60
+
+  // Update last-refresh timestamp in header
+  const updateRefreshDisplay = () => {
+    if (!lastFetchTime) return
+    const el = document.getElementById('last-refresh')
+    const age = Math.floor((Date.now() - lastFetchTime) / 1000)
+    if (age < REFRESH_RECENT_SECS) {
+      el.textContent = 'Updated just now'
+    } else {
+      el.textContent = `Updated ${duration(age)} ago`
+    }
+  }
+
   // encodes html reserved characters and ascii control characters
   const html = str => str
     ?.replace(/[\x00-\x1F]/g, c => `\\x${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`)
@@ -176,6 +530,16 @@
     return s
   }
   const since = t => `${duration(Date.now() / 1000 - t)} ago`
+
+  // Copy text to clipboard with visual feedback on the button
+  const copyToClipboard = (text, btn) => {
+    navigator.clipboard?.writeText(text).then(() => {
+      const orig = btn.innerHTML
+      btn.innerHTML = '<i class="fa fa-check"></i>'
+      setTimeout(() => { btn.innerHTML = orig }, 1500)
+    }).catch(() => {})
+  }
+
   // init map
   const map = L.map('map', {
     center: window.localStorage.getItem('center')?.split(',') ?? [25, 0],
@@ -241,8 +605,10 @@
   })
   // generates html for a node link
   const nodeLink = (num, label) => `<a href="#${num}" onclick="showNode(${num});return false;">${html(label)}</a>`
-  // updates node map markers
-  const updateNodes = data => {
+
+  // renders markers from data (respects active role filters)
+  const renderNodes = data => {
+    if (!data) return
     const popupWasOpen = lastActiveNode && markersByNode[lastActiveNode]?.isPopupOpen()
     const detailsLayerWasPopulated = detailsLayer.getLayers().length > 0
     markersByNode = {}
@@ -261,6 +627,12 @@
         windDirection, windSpeed, windGust, radiation, rainfall1, rainfall24,
         neighbors, seenBy
       } = node
+
+      // apply role filter
+      if (enabledRoles !== null && !enabledRoles.has(role)) {
+        return
+      }
+
       const id = `!${Number(nodeNum).toString(16)}`
       const position = [latitude, longitude].map(x => x / 10000000)
       let precisionCorners
@@ -326,7 +698,11 @@
       const tooltipContent = `${html(longName)} (${html(shortName)}) ${since(lastSeen)}`
       const popupContent = `
         <div class="title">${html(longName)} (${html(shortName)})</div>
-        <div>${nodeLink(nodeNum, id)} | ${html(role)} | ${html(hwModel)}</div>
+        <div>
+          ${nodeLink(nodeNum, id)}
+          <button class="copy-id-btn" data-id="${html(id)}" title="Copy node ID" onclick="copyToClipboard(this.dataset.id,this)"><i class="fa fa-clipboard"></i></button>
+          | ${html(role)} | ${html(hwModel)}
+        </div>
         <table><tbody>
         ${uptime             ? `<tr><th>Uptime</th><td>${duration(uptime)}</td></tr>`                                : ''}
         ${batteryLevel       ? `<tr><th>Power</th><td>${batteryLevel > 100 ? 'Plugged in' : `${batteryLevel}%`}` +
@@ -384,7 +760,12 @@
       `
       const searchString = `${longName} (${shortName}) ${id}`
       nodesBySearchString[searchString] = nodeNum
-      markersByNode[nodeNum] = L.marker(position, {alt: 'Node', opacity, searchString})
+      markersByNode[nodeNum] = L.marker(position, {
+        alt: 'Node',
+        opacity,
+        searchString,
+        icon: createIcon(role, opacity),
+      })
         .bindTooltip(tooltipContent, {opacity: 0.95})
         .bindPopup(popupContent, {maxWidth: 600})
         .on('popupopen', () => {
@@ -412,11 +793,17 @@
     markers.addLayers(Object.values(markersByNode))
     reactivate()
   }
+
   // fetches node data, updates map, repeats
   const drawMap = async () => {
     try {
-      await fetch('/nodes.json').then(r => r.json()).then(updateNodes)
+      const data = await fetch('/nodes.json').then(r => r.json())
+      lastData = data
+      lastFetchTime = Date.now()
+      renderNodes(data)
       updateNodeCount(Object.keys(markersByNode).length)
+      updateStats(data)
+      updateRefreshDisplay()
     } catch (e) {
       console.error('Failed to update nodes:', e)
     }
@@ -456,6 +843,8 @@
       history.replaceState(null, '', window.location.pathname)
     }
   })
+  // keep last-refresh display ticking
+  setInterval(updateRefreshDisplay, 30000)
   // let's go!!!
   attribution.setPrefix('Loading node data&hellip;')
   drawMap().then(() => {

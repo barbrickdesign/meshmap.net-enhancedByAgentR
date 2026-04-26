@@ -21,18 +21,23 @@ import (
 )
 
 const (
-	NodeExpiration     = 28800 // 8 hr
-	NeighborExpiration = 7200  // 2 hr
-	MetricsExpiration  = 7200  // 2 hr
-	PruneWriteInterval = time.Minute
-	RateLimitCount     = 1500
-	RateLimitDuration  = 5 * time.Minute
+	NodeExpiration      = 28800 // 8 hr
+	NeighborExpiration  = 7200  // 2 hr
+	MetricsExpiration   = 7200  // 2 hr
+	MapReportExpiration = 28800 // 8 hr
+	PruneWriteInterval  = time.Minute
+	// Allow up to this many consecutive idle prune intervals before dying.
+	// A brief MQTT reconnect can cause a gap, so we tolerate a few cycles.
+	MaxIdleIntervals = 3
+	RateLimitCount   = 1500
+	RateLimitDuration = 5 * time.Minute
 )
 
 var (
-	Nodes      meshtastic.NodeDB
-	NodesMutex sync.Mutex
-	Receiving  atomic.Bool
+	Nodes        meshtastic.NodeDB
+	NodesMutex   sync.Mutex
+	Receiving    atomic.Bool
+	IdleCount    atomic.Int32
 )
 
 func handleMessage(from uint32, topic string, portNum generated.PortNum, payload []byte) {
@@ -279,7 +284,7 @@ func main() {
 		for {
 			time.Sleep(PruneWriteInterval)
 			NodesMutex.Lock()
-			Nodes.Prune(NodeExpiration, NeighborExpiration, MetricsExpiration, NodeExpiration)
+			Nodes.Prune(NodeExpiration, NeighborExpiration, MetricsExpiration, MapReportExpiration)
 			if len(dbPath) > 0 {
 				valid := Nodes.GetValid()
 				err := valid.WriteFile(dbPath)
@@ -290,7 +295,13 @@ func main() {
 			}
 			NodesMutex.Unlock()
 			if !Receiving.CompareAndSwap(true, false) {
-				log.Fatal("[fatal] no messages received")
+				n := IdleCount.Add(1)
+				log.Printf("[warn] no messages received (idle interval %v/%v)", n, MaxIdleIntervals)
+				if n >= MaxIdleIntervals {
+					log.Fatal("[fatal] no messages received for too long")
+				}
+			} else {
+				IdleCount.Store(0)
 			}
 		}
 	}()
